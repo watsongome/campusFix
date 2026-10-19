@@ -14,21 +14,18 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.campusfix.ui.components.*
 import com.example.campusfix.ui.theme.*
 
 @Composable
-fun LoginScreen(onSignIn: () -> Unit = {}, onCreateAccount: () -> Unit = {}) {
+fun LoginScreen(onSignIn: (String) -> Unit = {}, onCreateAccount: () -> Unit = {}) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
 
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)
-    ) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp)) {
         Spacer(Modifier.height(48.dp))
         Text("CampusFix", fontSize = 30.sp, fontWeight = FontWeight.Bold, color = CfGreen)
         Text("University maintenance reporting", fontSize = 13.sp, color = CfMuted)
@@ -53,7 +50,7 @@ fun LoginScreen(onSignIn: () -> Unit = {}, onCreateAccount: () -> Unit = {}) {
             Text("Forgot password?", color = CfGreen, fontSize = 12.sp)
         }
         Spacer(Modifier.height(8.dp))
-        PrimaryButton("Sign in", onClick = onSignIn)
+        PrimaryButton("Sign in", onClick = { onSignIn(email) })
         Spacer(Modifier.height(16.dp))
         Text("or", color = CfMuted, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
         Spacer(Modifier.height(16.dp))
@@ -68,10 +65,4 @@ fun LoginScreen(onSignIn: () -> Unit = {}, onCreateAccount: () -> Unit = {}) {
             modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center
         )
     }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-private fun LoginPreview() = CampusFixTheme {
-    LoginScreen()
 }

@@ -7,19 +7,23 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-//import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.campusfix.data.MockReportRepository
 import com.example.campusfix.data.model.Report
 import com.example.campusfix.data.model.ReportStatus
 import com.example.campusfix.ui.theme.*
@@ -30,7 +34,7 @@ fun StatusChip(status: ReportStatus) {
         ReportStatus.REPORTED -> CfAmberBg to CfAmber
         ReportStatus.ASSIGNED -> CfBlueBg to CfBlue
         ReportStatus.IN_PROGRESS -> CfMint to CfGreen
-        ReportStatus.RESOLVED -> Color(0xFFD3EADF) to Color(0xFF14513F)
+        ReportStatus.RESOLVED -> CfResolvedBg to CfResolved
     }
     Text(
         text = status.label, color = fg, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
@@ -43,24 +47,24 @@ fun StatusChip(status: ReportStatus) {
 @Composable
 fun ReportCard(report: Report, showId: Boolean, onClick: () -> Unit) {
     val shape = RoundedCornerShape(14.dp)
+    val note = buildList {
+        if (report.affectedCount > 1) add("${report.affectedCount} affected")
+        if (MockReportRepository.isFollowing(report)) add("Following")
+    }.joinToString(" \u2022 ")
+
     Card(
         shape = shape,
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = CfSurface),
         border = BorderStroke(1.dp, CfBorder),
         modifier = Modifier.fillMaxWidth().clip(shape).clickable(onClick = onClick)
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            val warn = report.status == ReportStatus.REPORTED
             Box(
-                Modifier.size(40.dp).background(
-                    if (report.status == ReportStatus.REPORTED) CfAmberBg else CfMint,
-                    RoundedCornerShape(10.dp)
-                ),
+                Modifier.size(40.dp).background(if (warn) CfAmberBg else CfMint, RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    Icons.Default.Warning, null, Modifier.size(20.dp),
-                    tint = if (report.status == ReportStatus.REPORTED) CfAmber else CfGreen
-                )
+                Icon(Icons.Default.Warning, null, Modifier.size(20.dp), tint = if (warn) CfAmber else CfGreen)
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -68,9 +72,12 @@ fun ReportCard(report: Report, showId: Boolean, onClick: () -> Unit) {
                 Text(report.location, fontSize = 12.sp, color = CfMuted)
                 if (showId) Text(report.id, fontSize = 11.sp, color = CfMuted)
                 Spacer(Modifier.height(6.dp))
-                StatusChip(report.status)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    StatusChip(report.status)
+                    if (note.isNotEmpty()) Text(note, fontSize = 11.sp, color = CfMuted, modifier = Modifier.padding(start = 8.dp))
+                }
             }
-            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = CfMuted)
+            Icon(Icons.Default.KeyboardArrowRight, null, tint = CfMuted)
         }
     }
 }
@@ -81,7 +88,7 @@ fun PrimaryButton(text: String, modifier: Modifier = Modifier, enabled: Boolean 
         onClick = onClick, enabled = enabled,
         modifier = modifier.fillMaxWidth().height(52.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = CfGreen)
+        colors = ButtonDefaults.buttonColors(containerColor = CfGreen, contentColor = CfOnGreen)
     ) { Text(text, fontWeight = FontWeight.SemiBold) }
 }
 
@@ -92,7 +99,7 @@ fun SecondaryButton(text: String, modifier: Modifier = Modifier, onClick: () -> 
         modifier = modifier.fillMaxWidth().height(52.dp),
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, CfBorder),
-        colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White, contentColor = CfGreen)
+        colors = ButtonDefaults.outlinedButtonColors(containerColor = CfSurface, contentColor = CfGreen)
     ) { Text(text, fontWeight = FontWeight.SemiBold) }
 }
 
@@ -119,13 +126,43 @@ fun CfTextField(
         visualTransformation = visualTransformation,
         trailingIcon = trailingIcon,
         shape = RoundedCornerShape(12.dp),
+        // Text colors come from the theme, so typed text stays readable in light AND dark mode.
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = CfGreen, unfocusedBorderColor = CfBorder,
+            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+            unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
+            focusedBorderColor = CfGreen,
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
             focusedLabelColor = CfGreen,
-            focusedContainerColor = Color.White, unfocusedContainerColor = Color.White
+            unfocusedLabelColor = CfMuted,
+            cursorColor = CfGreen,
+            focusedContainerColor = CfSurface,
+            unfocusedContainerColor = CfSurface
         ),
         modifier = modifier.fillMaxWidth()
     )
+}
+
+@Composable
+fun CfDropdownField(
+    value: String,
+    label: String,
+    placeholder: String,
+    options: List<String>,
+    onSelect: (String) -> Unit
+) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        CfTextField(
+            value, {}, label, readOnly = true, placeholder = placeholder,
+            trailingIcon = { Icon(Icons.Default.ArrowDropDown, null) }
+        )
+        Box(Modifier.matchParentSize().clickable { open = true })
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(text = { Text(option) }, onClick = { onSelect(option); open = false })
+            }
+        }
+    }
 }
 
 @Composable

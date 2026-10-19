@@ -13,9 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.campusfix.data.model.ReportStatus
@@ -33,7 +31,7 @@ fun SubmittedScreen(reportId: String, onViewReports: () -> Unit) {
             Modifier.fillMaxWidth().background(CfMint, RoundedCornerShape(20.dp)).padding(vertical = 40.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(Modifier.size(72.dp).background(Color.White, CircleShape), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(72.dp).background(CfSurface, CircleShape), contentAlignment = Alignment.Center) {
                 Icon(Icons.Default.Check, null, tint = CfGreen, modifier = Modifier.size(36.dp))
             }
             Spacer(Modifier.height(14.dp))
@@ -48,7 +46,7 @@ fun SubmittedScreen(reportId: String, onViewReports: () -> Unit) {
 
         Card(
             Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = CfSurface),
             border = BorderStroke(1.dp, CfBorder)
         ) {
             Column(Modifier.padding(14.dp)) {
@@ -67,10 +65,4 @@ fun SubmittedScreen(reportId: String, onViewReports: () -> Unit) {
         Spacer(Modifier.height(24.dp))
         PrimaryButton("View my reports", onClick = onViewReports)
     }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun SubmittedPreview() = CampusFixTheme {
-    SubmittedScreen(reportId = "CF-2026-0043", onViewReports = {})
 }

@@ -15,13 +15,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.campusfix.data.MockReportRepository
+import com.example.campusfix.data.Session
 import com.example.campusfix.data.model.ReportStatus
+import com.example.campusfix.data.model.UserRole
+import com.example.campusfix.ui.components.PrimaryButton
 import com.example.campusfix.ui.components.SecondaryButton
 import com.example.campusfix.ui.components.StatusChip
 import com.example.campusfix.ui.theme.*
@@ -40,10 +41,14 @@ fun ReportDetailsScreen(reportId: String, onBack: () -> Unit) {
             return@Column
         }
 
+        val mine = MockReportRepository.isMine(report)
+        val following = MockReportRepository.isFollowing(report)
+        val isUser = Session.user?.role != UserRole.OFFICER
+
         Spacer(Modifier.height(8.dp))
         Card(
             Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = CfSurface),
             border = BorderStroke(1.dp, CfBorder)
         ) {
             Column(Modifier.padding(16.dp)) {
@@ -53,6 +58,28 @@ fun ReportDetailsScreen(reportId: String, onBack: () -> Unit) {
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(report.title, fontWeight = FontWeight.Bold, fontSize = 17.sp, color = CfText)
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "${report.affectedCount} ${if (report.affectedCount == 1) "person" else "people"} affected",
+                    fontSize = 12.sp, color = CfMuted
+                )
+            }
+        }
+
+        // Someone else's report: join it instead of filing a duplicate
+        if (isUser && !mine) {
+            Spacer(Modifier.height(12.dp))
+            if (following) {
+                Text(
+                    "\u2713 You're following this report. It now shows in My reports so you can track its progress.",
+                    fontSize = 13.sp, color = CfGreen, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.fillMaxWidth().background(CfMint, RoundedCornerShape(12.dp)).padding(14.dp)
+                )
+            } else {
+                Text("Someone has already reported this. Have the same problem? Add yourself instead of reporting it again.",
+                    fontSize = 13.sp, color = CfMuted)
+                Spacer(Modifier.height(10.dp))
+                PrimaryButton("I'm affected too") { MockReportRepository.join(report.id) }
             }
         }
 
@@ -66,10 +93,10 @@ fun ReportDetailsScreen(reportId: String, onBack: () -> Unit) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
                         Modifier.size(20.dp)
-                            .background(if (done) CfGreen else Color.White, CircleShape)
+                            .background(if (done) CfGreen else CfSurface, CircleShape)
                             .border(1.dp, if (done) CfGreen else CfBorder, CircleShape),
                         contentAlignment = Alignment.Center
-                    ) { if (done) Icon(Icons.Default.Check, null, tint = Color.White, modifier = Modifier.size(12.dp)) }
+                    ) { if (done) Icon(Icons.Default.Check, null, tint = CfOnGreen, modifier = Modifier.size(12.dp)) }
                     if (!last) Box(Modifier.width(2.dp).height(18.dp).background(if (done) CfGreen else CfBorder))
                 }
                 Spacer(Modifier.width(12.dp))
@@ -90,7 +117,7 @@ fun ReportDetailsScreen(reportId: String, onBack: () -> Unit) {
         Text("Description", fontWeight = FontWeight.Bold, color = CfText)
         Text(report.description, fontSize = 13.sp, color = CfMuted, modifier = Modifier.padding(top = 4.dp))
         Spacer(Modifier.height(24.dp))
-        SecondaryButton("Back to My Reports", onClick = onBack)
+        SecondaryButton("Back", onClick = onBack)
     }
 }
 
@@ -100,10 +127,4 @@ private fun InfoRow(label: String, value: String) {
         Text(label, fontSize = 11.sp, color = CfMuted)
         Text(value, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = CfText)
     }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun ReportDetailsPreview() = CampusFixTheme {
-    ReportDetailsScreen(reportId = "CF-2026-0042", onBack = {})
 }
