@@ -1,11 +1,14 @@
 package com.example.campusfix.ui.report
 
+import android.content.ActivityNotFoundException
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +23,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -29,6 +35,8 @@ import com.example.campusfix.data.model.campusBuildings
 import com.example.campusfix.data.model.reportCategories
 import com.example.campusfix.ui.components.*
 import com.example.campusfix.ui.theme.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun ReportProblemScreen(
@@ -36,15 +44,37 @@ fun ReportProblemScreen(
     onOpenReport: (String) -> Unit,
     onSubmit: (title: String, category: String, building: String, room: String, description: String, hasPhoto: Boolean) -> Unit
 ) {
+    val context = LocalContext.current
     var title by rememberSaveable { mutableStateOf("") }
     var category by rememberSaveable { mutableStateOf("") }
     var building by rememberSaveable { mutableStateOf("") }
     var room by rememberSaveable { mutableStateOf("") }
     var description by rememberSaveable { mutableStateOf("") }
     var photoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
+    var pendingCameraUri by rememberSaveable { mutableStateOf<Uri?>(null) }   // survives rotation while the camera is open
     var showDuplicateDialog by remember { mutableStateOf(false) }
 
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { photoUri = it }
+    // Photo from the gallery. Cancelling must not wipe a photo that is already attached.
+    val galleryPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) photoUri = uri
+    }
+    // Photo from the camera. The system camera app saves into pendingCameraUri; no CAMERA permission needed.
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { saved ->
+        if (saved) photoUri = pendingCameraUri
+        pendingCameraUri = null
+    }
+
+    fun takePhoto() {
+        val uri = createImageUri(context)
+        pendingCameraUri = uri
+        try {
+            camera.launch(uri)
+        } catch (e: ActivityNotFoundException) {
+            pendingCameraUri = null
+            Toast.makeText(context, "No camera app found on this device", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     val valid = title.isNotBlank() && category.isNotBlank() && building.isNotBlank() && description.isNotBlank()
     val similar = if (building.isNotBlank() && category.isNotBlank())
         MockReportRepository.findSimilar(building, category) else emptyList()
@@ -103,21 +133,14 @@ fun ReportProblemScreen(
         CfTextField(description, { description = it }, "Description", placeholder = "Describe what is wrong...", singleLine = false, minLines = 4)
         Spacer(Modifier.height(12.dp))
 
-        Row(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(CfSurface)
-                .clickable { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(Modifier.size(40.dp).background(CfMint, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
-                Icon(if (photoUri == null) Icons.Default.Add else Icons.Default.Check, null, tint = CfGreen)
-            }
-            Spacer(Modifier.width(12.dp))
-            Column {
-                Text(if (photoUri == null) "Add a photo" else "Photo attached", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = CfText)
-                Text(if (photoUri == null) "Optional" else "Tap to change", fontSize = 11.sp, color = CfMuted)
-            }
-        }
+        PhotoSection(
+            photoUri = photoUri,
+            onTakePhoto = ::takePhoto,
+            onChooseFromGallery = {
+                galleryPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            },
+            onRemove = { photoUri = null }
+        )
 
         Spacer(Modifier.height(24.dp))
         PrimaryButton("Submit report", enabled = valid) {
@@ -126,4 +149,54 @@ fun ReportProblemScreen(
         Text("You'll receive a unique report ID.", fontSize = 11.sp, color = CfMuted, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().padding(top = 10.dp))
     }
+}
+
+@Composable
+private fun PhotoSection(
+    photoUri: Uri?,
+    onTakePhoto: () -> Unit,
+    onChooseFromGallery: () -> Unit,
+    onRemove: () -> Unit
+) {
+    val context = LocalContext.current
+    val thumbnail by produceState<ImageBitmap?>(initialValue = null, photoUri) {
+        value = photoUri?.let { withContext(Dispatchers.IO) { decodeThumbnail(context, it) } }
+    }
+
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(CfSurface).padding(14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(56.dp).clip(RoundedCornerShape(10.dp)).background(CfMint),
+                contentAlignment = Alignment.Center
+            ) {
+                val bitmap = thumbnail
+                if (bitmap != null) {
+                    Image(bitmap, "Attached photo", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                } else {
+                    Icon(if (photoUri == null) Icons.Default.Add else Icons.Default.Check, null, tint = CfGreen)
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(if (photoUri == null) "Add a photo" else "Photo attached", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = CfText)
+                Text(if (photoUri == null) "Optional" else "Take or choose another to replace it", fontSize = 11.sp, color = CfMuted)
+            }
+            if (photoUri != null) TextButton(onClick = onRemove) { Text("Remove", color = CfGreen) }
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PhotoButton("Take photo", Modifier.weight(1f), onTakePhoto)
+            PhotoButton("Choose from gallery", Modifier.weight(1f), onChooseFromGallery)
+        }
+    }
+}
+
+@Composable
+private fun PhotoButton(text: String, modifier: Modifier, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick, modifier = modifier,
+        shape = RoundedCornerShape(10.dp),
+        border = BorderStroke(1.dp, CfBorder),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = CfGreen)
+    ) { Text(text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
 }
