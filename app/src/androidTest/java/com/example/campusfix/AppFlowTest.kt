@@ -1,9 +1,12 @@
 package com.example.campusfix
 
+//import androidx.compose.ui.test.assertDoesNotExist
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.example.campusfix.data.MockReportRepository
@@ -39,6 +42,8 @@ class AppFlowTest {
         rule.onNodeWithText("Something on campus isn't working properly?").performClick()
     }
 
+    // ---------- Student ----------
+
     @Test
     fun loginScreen_isShownFirst() {
         rule.onNodeWithText("CampusFix").assertExists()
@@ -50,12 +55,6 @@ class AppFlowTest {
         signInAs("student@unima.ac.mw")
         rule.onNodeWithText("What needs fixing?").assertExists()
         rule.onNodeWithText("How it works").assertExists()
-    }
-
-    @Test
-    fun officerSignIn_showsTheQueueInsteadOfHome() {
-        signInAs("officer@unima.ac.mw")
-        rule.onNodeWithText("Maintenance queue").assertExists()
     }
 
     @Test
@@ -86,5 +85,43 @@ class AppFlowTest {
         rule.onNodeWithText("Library").performClick()
 
         rule.onNodeWithText("No open reports for Furniture in Library. You're good to continue.").assertExists()
+    }
+
+    @Test
+    fun student_doesNotSeeOfficerControls() {
+        signInAs("student@unima.ac.mw")
+        rule.onNodeWithText("Leaking tap").performScrollTo().performClick()
+
+        rule.onNodeWithText("Report details").assertExists()
+        rule.onNodeWithText("Mark as Assigned").assertDoesNotExist()
+    }
+
+    // ---------- Officer ----------
+
+    @Test
+    fun officerSignIn_showsTheQueueInsteadOfHome() {
+        signInAs("officer@unima.ac.mw")
+        rule.onNodeWithText("Maintenance queue").assertExists()
+    }
+
+    @Test
+    fun officerQueue_canBeFilteredByStatus() {
+        signInAs("officer@unima.ac.mw")
+
+        rule.onNodeWithTag("filter_RESOLVED").performClick()
+
+        rule.onNodeWithText("Damaged desk").assertExists()
+        rule.onNodeWithText("Leaking tap").assertDoesNotExist()
+    }
+
+    @Test
+    fun officerCanAdvanceAReportToTheNextStatus() {
+        signInAs("officer@unima.ac.mw")
+        rule.onNodeWithTag("filter_REPORTED").performClick()
+        rule.onNodeWithText("Leaking tap").performClick()
+
+        rule.onNodeWithText("Mark as Assigned").performClick()
+
+        rule.onNodeWithText("Mark as In Progress").assertExists()
     }
 }

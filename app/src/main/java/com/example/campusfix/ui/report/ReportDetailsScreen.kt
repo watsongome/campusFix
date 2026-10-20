@@ -12,7 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -30,6 +30,7 @@ import com.example.campusfix.ui.theme.*
 @Composable
 fun ReportDetailsScreen(reportId: String, onBack: () -> Unit) {
     val report = MockReportRepository.find(reportId)
+    var confirmResolve by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -43,7 +44,7 @@ fun ReportDetailsScreen(reportId: String, onBack: () -> Unit) {
 
         val mine = MockReportRepository.isMine(report)
         val following = MockReportRepository.isFollowing(report)
-        val isUser = Session.user?.role != UserRole.OFFICER
+        val isOfficer = Session.user?.role == UserRole.OFFICER
 
         Spacer(Modifier.height(8.dp))
         Card(
@@ -66,8 +67,29 @@ fun ReportDetailsScreen(reportId: String, onBack: () -> Unit) {
             }
         }
 
+        // Officer: move the report one step forward
+        if (isOfficer) {
+            Spacer(Modifier.height(16.dp))
+            val next = report.status.next
+            if (next == null) {
+                Text(
+                    "\u2713 This report is resolved. No further updates needed.",
+                    fontSize = 13.sp, color = CfGreen, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.fillMaxWidth().background(CfMint, RoundedCornerShape(12.dp)).padding(14.dp)
+                )
+            } else {
+                Text("Update status", fontWeight = FontWeight.Bold, color = CfText)
+                Text("Move this report to the next step. The reporter sees the change straight away.",
+                    fontSize = 12.sp, color = CfMuted, modifier = Modifier.padding(top = 2.dp, bottom = 10.dp))
+                PrimaryButton("Mark as ${next.label}") {
+                    if (next == ReportStatus.RESOLVED) confirmResolve = true
+                    else MockReportRepository.updateStatus(report.id, next)
+                }
+            }
+        }
+
         // Someone else's report: join it instead of filing a duplicate
-        if (isUser && !mine) {
+        if (!isOfficer && !mine) {
             Spacer(Modifier.height(12.dp))
             if (following) {
                 Text(
@@ -110,6 +132,7 @@ fun ReportDetailsScreen(reportId: String, onBack: () -> Unit) {
         Spacer(Modifier.height(8.dp))
         InfoRow("Category", report.category)
         InfoRow("Location", report.location)
+        report.assignedTo?.let { InfoRow("Handled by", it) }
         InfoRow("Submitted", report.submittedAt)
         if (report.hasPhoto) InfoRow("Photo", "1 attached")
 
@@ -118,6 +141,21 @@ fun ReportDetailsScreen(reportId: String, onBack: () -> Unit) {
         Text(report.description, fontSize = 13.sp, color = CfMuted, modifier = Modifier.padding(top = 4.dp))
         Spacer(Modifier.height(24.dp))
         SecondaryButton("Back", onClick = onBack)
+    }
+
+    if (confirmResolve && report != null) {
+        AlertDialog(
+            onDismissRequest = { confirmResolve = false },
+            title = { Text("Mark as resolved?") },
+            text = { Text("The reporter and everyone following this report will see it as resolved. This can't be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmResolve = false
+                    MockReportRepository.updateStatus(report.id, ReportStatus.RESOLVED)
+                }) { Text("Yes, resolve", color = CfGreen) }
+            },
+            dismissButton = { TextButton(onClick = { confirmResolve = false }) { Text("Cancel", color = CfGreen) } }
+        )
     }
 }
 

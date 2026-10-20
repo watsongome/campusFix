@@ -4,7 +4,10 @@ enum class ReportStatus(val label: String) {
     REPORTED("Reported"),
     ASSIGNED("Assigned"),
     IN_PROGRESS("In Progress"),
-    RESOLVED("Resolved")
+    RESOLVED("Resolved");
+
+    /** The only status a report may move to from this one (null once resolved). */
+    val next: ReportStatus? get() = entries.getOrNull(ordinal + 1)
 }
 
 data class Report(
@@ -18,7 +21,8 @@ data class Report(
     val status: ReportStatus,
     val reporterId: String,
     val affectedCount: Int = 1,
-    val hasPhoto: Boolean = false
+    val hasPhoto: Boolean = false,
+    val assignedTo: String? = null
 ) {
     val location: String get() = if (room.isBlank()) building else "$building \u2022 $room"
     val isOpen: Boolean get() = status != ReportStatus.RESOLVED

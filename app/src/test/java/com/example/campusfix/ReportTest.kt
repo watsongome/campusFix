@@ -4,6 +4,7 @@ import com.example.campusfix.data.model.Report
 import com.example.campusfix.data.model.ReportStatus
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -36,10 +37,21 @@ class ReportTest {
     // The status timeline on the details screen relies on this order.
     @Test
     fun statusOrder_followsTheWorkflow() {
-        val order = ReportStatus.entries
         assertEquals(
             listOf(ReportStatus.REPORTED, ReportStatus.ASSIGNED, ReportStatus.IN_PROGRESS, ReportStatus.RESOLVED),
-            order
+            ReportStatus.entries
         )
+    }
+
+    @Test
+    fun next_followsTheWorkflowOneStepAtATime() {
+        assertEquals(ReportStatus.ASSIGNED, ReportStatus.REPORTED.next)
+        assertEquals(ReportStatus.IN_PROGRESS, ReportStatus.ASSIGNED.next)
+        assertEquals(ReportStatus.RESOLVED, ReportStatus.IN_PROGRESS.next)
+    }
+
+    @Test
+    fun next_ofResolved_isNull() {
+        assertNull(ReportStatus.RESOLVED.next)
     }
 }
