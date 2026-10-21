@@ -9,15 +9,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
-/** Officer workflow: who may change a report's status, and how. */
+// Officer workflow
 class OfficerStatusUpdateTest {
 
     private val repo = MockReportRepository
 
     // Seed data used below:
     //   CF-2026-0037 Leaking tap     REPORTED,    no assignee
-    //   CF-2026-0042 Projector       IN_PROGRESS, assigned to "Officer Banda"
-    //   CF-2026-0044 Flickering      ASSIGNED,    assigned to "Officer Banda"
+    //   CF-2026-0042 Projector       IN_PROGRESS, assigned to "Officer Gome"
+    //   CF-2026-0044 Flickering      ASSIGNED,    assigned to "Officer Gome"
     //   CF-2026-0029 Damaged desk    RESOLVED
 
     @Before
@@ -54,7 +54,7 @@ class OfficerStatusUpdateTest {
     fun laterUpdates_keepTheExistingAssignee() {
         repo.updateStatus("CF-2026-0042", ReportStatus.RESOLVED)
 
-        assertEquals("Officer Banda", repo.find("CF-2026-0042")!!.assignedTo)
+        assertEquals("Officer Gome", repo.find("CF-2026-0042")!!.assignedTo)
     }
 
     @Test

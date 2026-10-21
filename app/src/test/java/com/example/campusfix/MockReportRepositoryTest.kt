@@ -26,7 +26,7 @@ class MockReportRepositoryTest {
         repo.reset()
     }
 
-    // ---------- add ----------
+    // add
 
     @Test
     fun add_createsReportedReportAtTheTop() {
@@ -69,7 +69,7 @@ class MockReportRepositoryTest {
         assertEquals(null, repo.find("CF-0000"))
     }
 
-    // ---------- duplicate detection ----------
+    // duplicate detection
 
     @Test
     fun findSimilar_matchesSameBuildingAndCategory() {
@@ -95,7 +95,7 @@ class MockReportRepositoryTest {
         assertEquals(1, repo.findSimilar("Library", "Plumbing").size)
     }
 
-    // ---------- "I'm affected too" ----------
+    // "I'm affected too"
 
     @Test
     fun join_followsReportAndIncreasesAffectedCount() {
@@ -133,7 +133,7 @@ class MockReportRepositoryTest {
         assertEquals(6, repo.reports.size)
     }
 
-    // ---------- my reports ----------
+    // my reports
 
     @Test
     fun myReports_startsWithOnlyTheStudentsOwnReports() {
@@ -154,7 +154,7 @@ class MockReportRepositoryTest {
         assertTrue(repo.myReports.isEmpty())
     }
 
-    // ---------- reset ----------
+    // reset
 
     @Test
     fun reset_restoresTheOriginalDemoData() {

@@ -26,7 +26,7 @@ class SessionTest {
 
     @Test
     fun signIn_officerPrefix_isNotCaseSensitive() {
-        Session.signIn("Officer.Banda@unima.ac.mw")
+        Session.signIn("Officer.Gome@unima.ac.mw")
         assertEquals(UserRole.OFFICER, Session.user?.role)
     }
 
@@ -39,8 +39,8 @@ class SessionTest {
 
     @Test
     fun signIn_buildsDisplayNameFromEmail() {
-        Session.signIn("banda@unima.ac.mw")
-        assertEquals("Banda", Session.user?.name)
+        Session.signIn("gome@unima.ac.mw")
+        assertEquals("Gome", Session.user?.name)
     }
 
     // Security rule: nobody can create an officer account by registering.

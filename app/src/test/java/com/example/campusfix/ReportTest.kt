@@ -34,7 +34,6 @@ class ReportTest {
         assertFalse(report(status = ReportStatus.RESOLVED).isOpen)
     }
 
-    // The status timeline on the details screen relies on this order.
     @Test
     fun statusOrder_followsTheWorkflow() {
         assertEquals(

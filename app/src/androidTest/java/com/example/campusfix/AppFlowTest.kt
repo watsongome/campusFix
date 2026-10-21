@@ -18,7 +18,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** UI tests: they drive the real screens on an emulator/phone. */
+// UI tests
 @RunWith(AndroidJUnit4::class)
 class AppFlowTest {
 
@@ -42,7 +42,7 @@ class AppFlowTest {
         rule.onNodeWithText("Something on campus isn't working properly?").performClick()
     }
 
-    // ---------- Student ----------
+    // Student
 
     @Test
     fun loginScreen_isShownFirst() {
@@ -76,6 +76,13 @@ class AppFlowTest {
     }
 
     @Test
+    fun reportForm_offersCameraAndGalleryForPhotos() {
+        openReportForm()
+        rule.onNodeWithText("Take photo").performScrollTo().assertExists()
+        rule.onNodeWithText("Choose from gallery").performScrollTo().assertExists()
+    }
+
+    @Test
     fun reportForm_noWarningWhenNothingMatches() {
         openReportForm()
 
@@ -96,7 +103,7 @@ class AppFlowTest {
         rule.onNodeWithText("Mark as Assigned").assertDoesNotExist()
     }
 
-    // ---------- Officer ----------
+    // Officer
 
     @Test
     fun officerSignIn_showsTheQueueInsteadOfHome() {
